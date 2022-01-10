@@ -432,7 +432,6 @@ class ServerProtocolTestGenerator(
         private val Ec2Query = "aws.protocoltests.ec2#AwsEc2"
         private val ExpectFail = setOf<FailingTest>(
             FailingTest(RestJson, "RestJsonAllQueryStringTypes", Action.Request),
-            FailingTest(RestJson, "RestJsonQueryStringEscaping", Action.Request),
             FailingTest(RestJson, "RestJsonSupportsNaNFloatQueryValues", Action.Request),
             FailingTest(RestJson, "DocumentOutput", Action.Response),
             FailingTest(RestJson, "DocumentOutputString", Action.Response),
@@ -605,6 +604,15 @@ class ServerProtocolTestGenerator(
                    }
                }""".trimMargin()).asObjectNode().get()
             ).build()
+        private fun fixRestJsonQueryStringEscaping(testCase: HttpRequestTestCase): HttpRequestTestCase =
+            testCase.toBuilder().params(
+                Node.parse("""{
+                   "queryString": "%:/?#[]@!${'$'}&'()*+,;=😹",
+                   "queryParamsMapOfStringList": {
+                       "String": ["%:/?#[]@!${'$'}&'()*+,;=😹"]
+                   }
+               }""".trimMargin()).asObjectNode().get()
+            ).build()
 
         // These are tests whose definitions in the `awslabs/smithy` repository are wrong.
         // This is because they have not been written from a server perspective, and as such the expected `params` field is incomplete.
@@ -613,7 +621,8 @@ class ServerProtocolTestGenerator(
             // https://github.com/awslabs/smithy/pull/1040
             Pair(RestJson, "RestJsonSupportsNaNFloatQueryValues") to ::fixRestJsonSupportsNaNFloatQueryValues,
             Pair(RestJson, "RestJsonSupportsInfinityFloatQueryValues") to ::fixRestJsonSupportsInfinityFloatQueryValues,
-            Pair(RestJson, "RestJsonSupportsNegativeInfinityFloatQueryValues") to ::fixRestJsonSupportsNegativeInfinityFloatQueryValues
+            Pair(RestJson, "RestJsonSupportsNegativeInfinityFloatQueryValues") to ::fixRestJsonSupportsNegativeInfinityFloatQueryValues,
+            Pair(RestJson, "RestJsonQueryStringEscaping") to ::fixRestJsonQueryStringEscaping
         )
     }
 }
