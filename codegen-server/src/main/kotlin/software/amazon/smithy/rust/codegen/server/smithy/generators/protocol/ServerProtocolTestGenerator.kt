@@ -295,7 +295,7 @@ class ServerProtocolTestGenerator(
             );
             """
         )
-        checkHttpExtensions(this)
+        checkHttpResponseExtensions(this)
         if (!testCase.body.isEmpty()) {
             rustTemplate(
                 """
@@ -333,12 +333,18 @@ class ServerProtocolTestGenerator(
         }
     }
 
-    private fun checkHttpExtensions(rustWriter: RustWriter) {
-        rustWriter.rust(
+    private fun checkHttpResponseExtensions(rustWriter: RustWriter) {
+        rustWriter.rustTemplate(
             """
-            let request_extensions = http_response.extensions().get::<aws_smithy_http_server::RequestExtensions>().expect("extension `RequestExtensions` not found");
-            assert_eq!(request_extensions.namespace, ${operationShape.id.getNamespace().dq()});
-            assert_eq!(request_extensions.operation_name, ${operationSymbol.name.dq()});
+            let request_extensions = http_response.extensions()
+                .get::<#{SmithyHttpServer}::ResponseExtensions>()
+                .expect("extension `ResponseExtensions` not found");
+            """.trimIndent(),
+            *codegenScope
+        )
+        rustWriter.writeWithNoFormatting(
+            """
+            assert_eq!(request_extensions.operation(), format!("{}#{}", "${operationShape.id.namespace}", "${operationSymbol.name}"));
             """.trimIndent()
         )
     }
@@ -434,7 +440,6 @@ class ServerProtocolTestGenerator(
         private val Ec2Query = "aws.protocoltests.ec2#AwsEc2"
         private val ExpectFail = setOf<FailingTest>(
             FailingTest(RestJson, "RestJsonInputAndOutputWithQuotedStringHeaders", Action.Request),
-            FailingTest(RestJson, "RestJsonInputAndOutputWithQuotedStringHeaders", Action.Response),
             FailingTest(RestJson, "RestJsonOutputUnionWithUnitMember", Action.Response),
             FailingTest(RestJson, "RestJsonUnitInputAllowsAccept", Action.Request),
             FailingTest(RestJson, "RestJsonUnitInputAndOutputNoOutput", Action.Response),
@@ -450,7 +455,6 @@ class ServerProtocolTestGenerator(
             FailingTest(RestJson, "DocumentTypeAsPayloadInputString", Action.Request),
             FailingTest(RestJson, "DocumentTypeAsPayloadOutput", Action.Response),
             FailingTest(RestJson, "DocumentTypeAsPayloadOutputString", Action.Response),
-            FailingTest(RestJson, "RestJsonEmptyInputAndEmptyOutput", Action.Response),
             FailingTest(RestJson, "RestJsonEndpointTrait", Action.Request),
             FailingTest(RestJson, "RestJsonEndpointTraitWithHostLabel", Action.Request),
             FailingTest(RestJson, "RestJsonInvalidGreetingError", Action.Response),
@@ -476,13 +480,9 @@ class ServerProtocolTestGenerator(
             FailingTest(RestJson, "RestJsonHttpPayloadWithStructure", Action.Response),
             FailingTest(RestJson, "RestJsonHttpPrefixHeadersArePresent", Action.Request),
             FailingTest(RestJson, "RestJsonHttpPrefixHeadersAreNotPresent", Action.Request),
-            FailingTest(RestJson, "RestJsonHttpPrefixHeadersArePresent", Action.Response),
-            FailingTest(RestJson, "HttpPrefixHeadersResponse", Action.Response),
             FailingTest(RestJson, "RestJsonSupportsNaNFloatLabels", Action.Request),
-            FailingTest(RestJson, "RestJsonHttpResponseCode", Action.Response),
             FailingTest(RestJson, "StringPayloadRequest", Action.Request),
             FailingTest(RestJson, "StringPayloadResponse", Action.Response),
-            FailingTest(RestJson, "RestJsonIgnoreQueryParamsInResponse", Action.Response),
             FailingTest(RestJson, "RestJsonInputAndOutputWithStringHeaders", Action.Request),
             FailingTest(RestJson, "RestJsonInputAndOutputWithNumericHeaders", Action.Request),
             FailingTest(RestJson, "RestJsonInputAndOutputWithBooleanHeaders", Action.Request),
@@ -491,14 +491,6 @@ class ServerProtocolTestGenerator(
             FailingTest(RestJson, "RestJsonSupportsNaNFloatHeaderInputs", Action.Request),
             FailingTest(RestJson, "RestJsonSupportsInfinityFloatHeaderInputs", Action.Request),
             FailingTest(RestJson, "RestJsonSupportsNegativeInfinityFloatHeaderInputs", Action.Request),
-            FailingTest(RestJson, "RestJsonInputAndOutputWithStringHeaders", Action.Response),
-            FailingTest(RestJson, "RestJsonInputAndOutputWithNumericHeaders", Action.Response),
-            FailingTest(RestJson, "RestJsonInputAndOutputWithBooleanHeaders", Action.Response),
-            FailingTest(RestJson, "RestJsonInputAndOutputWithTimestampHeaders", Action.Response),
-            FailingTest(RestJson, "RestJsonInputAndOutputWithEnumHeaders", Action.Response),
-            FailingTest(RestJson, "RestJsonSupportsNaNFloatHeaderOutputs", Action.Response),
-            FailingTest(RestJson, "RestJsonSupportsInfinityFloatHeaderOutputs", Action.Response),
-            FailingTest(RestJson, "RestJsonSupportsNegativeInfinityFloatHeaderOutputs", Action.Response),
             FailingTest(RestJson, "RestJsonJsonBlobs", Action.Response),
             FailingTest(RestJson, "RestJsonJsonEnums", Action.Response),
             FailingTest(RestJson, "RestJsonLists", Action.Response),
@@ -524,17 +516,13 @@ class ServerProtocolTestGenerator(
             FailingTest(RestJson, "RestJsonDeserializeMapUnionValue", Action.Response),
             FailingTest(RestJson, "RestJsonDeserializeStructureUnionValue", Action.Response),
             FailingTest(RestJson, "MediaTypeHeaderInputBase64", Action.Request),
-            FailingTest(RestJson, "MediaTypeHeaderOutputBase64", Action.Response),
             FailingTest(RestJson, "RestJsonNoInputAllowsAccept", Action.Request),
             FailingTest(RestJson, "RestJsonNoInputAndNoOutput", Action.Response),
             FailingTest(RestJson, "RestJsonNoInputAndOutputAllowsAccept", Action.Request),
-            FailingTest(RestJson, "RestJsonNoInputAndOutputWithJson", Action.Response),
-            FailingTest(RestJson, "RestJsonNullAndEmptyHeaders", Action.Response),
             FailingTest(RestJson, "RestJsonRecursiveShapes", Action.Response),
             FailingTest(RestJson, "RestJsonSimpleScalarProperties", Action.Request),
             FailingTest(RestJson, "RestJsonSupportsNaNFloatInputs", Action.Request),
             FailingTest(RestJson, "RestJsonSimpleScalarProperties", Action.Response),
-            FailingTest(RestJson, "RestJsonServersDontSerializeNullStructureValues", Action.Response),
             FailingTest(RestJson, "RestJsonSupportsNaNFloatInputs", Action.Response),
             FailingTest(RestJson, "RestJsonSupportsInfinityFloatInputs", Action.Response),
             FailingTest(RestJson, "RestJsonSupportsNegativeInfinityFloatInputs", Action.Response),
@@ -557,7 +545,6 @@ class ServerProtocolTestGenerator(
             FailingTest(RestJson, "RestJsonTestPayloadStructure", Action.Request),
             FailingTest(RestJson, "RestJsonHttpWithHeadersButNoPayload", Action.Request),
             FailingTest(RestJson, "RestJsonTimestampFormatHeaders", Action.Request),
-            FailingTest(RestJson, "RestJsonTimestampFormatHeaders", Action.Response),
             FailingTest("com.amazonaws.s3#AmazonS3", "GetBucketLocationUnwrappedOutput", Action.Response),
             FailingTest("com.amazonaws.s3#AmazonS3", "S3DefaultAddressing", Action.Request),
             FailingTest("com.amazonaws.s3#AmazonS3", "S3VirtualHostAddressing", Action.Request),
